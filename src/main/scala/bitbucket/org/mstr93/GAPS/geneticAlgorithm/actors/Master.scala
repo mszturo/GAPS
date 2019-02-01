@@ -1,7 +1,7 @@
 package bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors
 
 import akka.actor.{Actor, ActorSystem, Props}
-import bitbucket.org.mstr93.GAPS.geneticAlgorithm.Individual
+import bitbucket.org.mstr93.GAPS.geneticAlgorithm.{GeneticAlgorithm, Individual}
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Master._
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Supervisor.PartialGeneration
 
@@ -28,9 +28,10 @@ class Master(oldGen: Vector[Individual], crossProb: Double, mutProb: Double) ext
 }
 
 object Master {
-  def runParallel(oldGen: Vector[Individual], crossProb: Double, mutProb: Double): Vector[Individual] = {
+  def runParallel(algorithm: GeneticAlgorithm): Vector[Individual] = {
     val system = ActorSystem()
-    val master = system.actorOf(Props(classOf[Master], oldGen, crossProb, mutProb))
+    val master = system.actorOf(Props(classOf[Master],
+      algorithm.generation, algorithm.crossProb, algorithm.mutProb))
 
 
     Vector.empty

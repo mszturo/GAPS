@@ -10,11 +10,11 @@ object GAPS extends App {
   }
 
   def testGA(): Unit = {
-    val popSize = 12
+    val popSize = 10
     val crossProb = 0.9
-    val mutProb = 0.3
-    val genomeLength = 10
-    val iterations = 50
+    val mutProb = 0.1
+    val genomeLength = 12
+    val iterations = 60
     val testFunc = { xs: Vector[Boolean] =>
       xs.map {
         case true => 1.0
@@ -26,9 +26,15 @@ object GAPS extends App {
       crossProb,
       mutProb,
       genomeLength,
-      testFunc,
-      iterations)
-    ga.calculate()
+      testFunc)
+    val finalGA = ga.calculate(iterations)
+
+    println("Generation 0")
+    println("Population: " + ga.generation.mkString(", "))
+    println(ga.solution())
+    println("Generation " + iterations)
+    println("Population: " + finalGA.generation.mkString(", "))
+    println(finalGA.solution())
   }
 
   def testRandomIndividual(): Unit = {

@@ -2,49 +2,52 @@ package bitbucket.org.mstr93.GAPS.geneticAlgorithm
 
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Master
 
-class GeneticAlgorithm(private val popSize: Int,
-                       private val crossProb: Double,
-                       private val mutProb: Double,
-                       private val genomeLen: Int,
-                       private val fitFunc: Vector[Boolean] => Double,
-                       private val generation: Vector[Individual],
-                       private val iterationsLeft: Int) {
+class GeneticAlgorithm(val popSize: Int,
+                       val crossProb: Double,
+                       val mutProb: Double,
+                       val generation: Vector[Individual]) {
   val bestSolution: Individual = generation.max
 
-  def calculate(): Unit = {
-    calculate(this, iterationsLeft)
+  def calculate(iterations: Int): GeneticAlgorithm = {
+    calculateGen(this, iterations, iterations)
   }
 
-  private def calculate(oldGA: GeneticAlgorithm,
-                        totalIterations: Int): Unit = {
-    println("Generation: " + generation)
-    println("Best Solution: " + bestSolution +
-      " Fitness: " + bestSolution.fitness)
-    val newGen = newGeneration()
-    val nextGA = GeneticAlgorithm(
-      oldGA.popSize,
-      oldGA.adjustCrossProb(totalIterations),
-      oldGA.adjustMutProb(totalIterations),
-      oldGA.genomeLen,
-      oldGA.fitFunc,
-      newGen,
-      oldGA.iterationsLeft - 1)
-    if (iterationsLeft > 0)
-      nextGA.calculate(nextGA,
-        totalIterations: Int)
+  private def calculateGen(oldGA: GeneticAlgorithm,
+                           iterationsLeft: Int,
+                           totalIterations: Int): GeneticAlgorithm = {
+    //    PRINTING
+    //    println("Best Solution: " + bestSolution +
+    //      " Fitness: " + bestSolution.fitness)
+
+    if (iterationsLeft > 0) {
+      val nextGA = GeneticAlgorithm(
+        oldGA.popSize,
+        oldGA.adjustCrossProb(iterationsLeft,
+          totalIterations),
+        oldGA.adjustMutProb(iterationsLeft,
+          totalIterations),
+        newGeneration())
+
+      nextGA.calculateGen(nextGA,
+        iterationsLeft - 1,
+        totalIterations)
+    } else
+      this
   }
 
   //  TODO optimize in the future
-  def adjustCrossProb(totalIterations: Int): Double = {
+  private def adjustCrossProb(iterationsLeft: Int,
+                              totalIterations: Int): Double = {
     crossProb
   }
 
   //  TODO optimize in the future
-  def adjustMutProb(totalIterations: Int): Double = {
+  private def adjustMutProb(iterationsLeft: Int,
+                            totalIterations: Int): Double = {
     mutProb
   }
 
-  def newGeneration(): Vector[Individual] = {
+  private def newGeneration(): Vector[Individual] = {
     def newGenTail(newGen: Vector[Individual],
                    reminder: Int): Vector[Individual] = {
       if (reminder > 0) {
@@ -95,12 +98,13 @@ class GeneticAlgorithm(private val popSize: Int,
   }
 
   //  TODO
-  def parallelNewGeneration(oldGen: Vector[Individual]): Vector[Individual] = {
+  private def parallelNewGeneration(oldGen: Vector[Individual]
+                                   ): Vector[Individual] = {
     def parallelNewGenTail(oldGen: Vector[Individual],
                            newGen: Vector[Individual],
                            reminder: Int): Vector[Individual] = {
       if (reminder > 0) {
-        Master.runParallel(oldGen, crossProb, mutProb)
+        Master.runParallel(this)
       } else {
         newGen
       }
@@ -109,11 +113,13 @@ class GeneticAlgorithm(private val popSize: Int,
     parallelNewGenTail(oldGen, Vector.empty, popSize)
   }
 
+  def solution(): String =
+    "Best Solution: " + bestSolution + " Fitness: " + bestSolution.fitness
+
   override def toString: String =
     "Population size: " + popSize +
       "\nCross probability: " + crossProb +
-      "\nMutation probability: " + mutProb +
-      "\nGenome length: " + genomeLen
+      "\nMutation probability: " + mutProb
 }
 
 object GeneticAlgorithm {
@@ -121,38 +127,27 @@ object GeneticAlgorithm {
             crossProb: Double,
             mutProb: Double,
             genomeLen: Int,
-            fitFunc: Vector[Boolean] => Double,
-            generation: Vector[Individual],
-            iterationsLeft: Int
-           ): GeneticAlgorithm = {
+            fitFunc: Vector[Boolean] => Double): GeneticAlgorithm = {
     new GeneticAlgorithm(popSize,
       crossProb,
       mutProb,
-      genomeLen,
-      fitFunc,
-      generation,
-      iterationsLeft)
+      generateRandomPop(popSize,
+        genomeLen, fitFunc))
   }
 
-  def apply(popSize: Int,
-            crossProb: Double,
-            mutProb: Double,
-            genomeLen: Int,
-            fitFunc: Vector[Boolean] => Double,
-            iterationsLeft: Int
-           ): GeneticAlgorithm = {
+  private def apply(popSize: Int,
+                    crossProb: Double,
+                    mutProb: Double,
+                    generation: Vector[Individual]): GeneticAlgorithm = {
     new GeneticAlgorithm(popSize,
       crossProb,
       mutProb,
-      genomeLen,
-      fitFunc,
-      generateRandomPop(popSize,
-        genomeLen, fitFunc),
-      iterationsLeft)
+      generation)
   }
 
   private def generateRandomPop(popSize: Int,
                                 genomeLen: Int,
-                                fitFunc: Vector[Boolean] => Double): Vector[Individual] =
+                                fitFunc: Vector[Boolean] => Double
+                               ): Vector[Individual] =
     Vector.fill(popSize)(Individual(genomeLen, fitFunc))
 }
