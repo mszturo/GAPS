@@ -3,18 +3,19 @@ package bitbucket.org.mstr93.GAPS
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.{GeneticAlgorithm, Individual}
 
 object GAPS extends App {
-  override def main(args: Array[String]): Unit = {
-    //        testRandomIndividual
-    //        testCrossing(10)
-    testGA()
-  }
+  //  testRandomIndividual()
+  //  testCrossing(10)
+  val mockGA = getTestGA
+  val iterations = 500
+  testLinear(mockGA, iterations)
+  testParallel(mockGA, iterations)
 
-  def testGA(): Unit = {
-    val popSize = 10
+  def getTestGA: GeneticAlgorithm = {
+    val popSize = 12
     val crossProb = 0.9
-    val mutProb = 0.1
+    val mutProb = 0.2
     val genomeLength = 12
-    val iterations = 60
+
     val testFunc = { xs: Vector[Boolean] =>
       xs.map {
         case true => 1.0
@@ -22,20 +23,39 @@ object GAPS extends App {
       }.fold(0.0)((a, b) => a + b)
     }
 
-    val ga = GeneticAlgorithm(popSize,
+    GeneticAlgorithm(popSize,
       crossProb,
       mutProb,
       genomeLength,
       testFunc)
-    val finalGA = ga.calculate(iterations)
+  }
+
+  def testLinear(ga: GeneticAlgorithm, iterations: Int): Unit = {
+    println("\nSINGLE THREAD")
 
     println("Generation 0")
     println("Population: " + ga.generation.mkString(", "))
     println(ga.solution())
+
+    val finalGA = ga.calculateSequentialStatic(iterations)
     println("Generation " + iterations)
     println("Population: " + finalGA.generation.mkString(", "))
     println(finalGA.solution())
   }
+
+  def testParallel(ga: GeneticAlgorithm, iterations: Int): Unit = {
+    println("\nPARALLEL")
+
+    println("Generation 0")
+    println("Population: " + ga.generation.mkString(", "))
+    println(ga.solution())
+
+    val finalGA = ga.calculateParallelStatic(iterations)
+    println("Generation " + iterations)
+    println("Population: " + finalGA.generation.mkString(", "))
+    println(finalGA.solution())
+  }
+
 
   def testRandomIndividual(): Unit = {
     val testFunc = { xs: Vector[Boolean] => xs.length.toDouble }
@@ -53,7 +73,6 @@ object GAPS extends App {
     println("Parents")
     println(parent1)
     println(parent2)
-    var i = 0
 
     for (i <- 1 to tries) {
       println("Try: " + i)

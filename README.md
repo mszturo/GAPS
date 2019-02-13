@@ -4,6 +4,38 @@ Genetic Algorithm Problem Solver
 
 Single-threaded (currently working on concurrency) program to solve problems using genetic algorithm.
 
+## Domain
+
+**Individual**
+
+Represents single solution to a problem with a sequence of 0's and 1's.
+
+Defined with genome length: (Int) and function: (Vector[Boolean] => Double) to compute fitness of the solution.
+
+Public interface contains methods:
+ 1) mutate: (Double => Individual) creates new Individual based on a mutation probability. 
+ 2) cross: ((Individual, Double) => (Individual, Individual)) produces pair of children from 
+ crossing two Individuals.
+
+**GeneticAlgorithm**
+
+Defined with population size, crossing probability, mutation probability and a population 
+(generation).
+
+To create GA it is needed to provide fitness function: (Vector[Boolean] => Double) as well (*will 
+be changed*).
+
+Public interface contains methods:
+ 1) calculateSequentialStatic: (Int => GeneticAlgorithm) calculates given iterations in a single 
+ thread without adjusting mutation and crossing probabilities.
+ 2) solution: (String) returns the solution with the highest fitness value of the generation 
+ contained in this GeneticAlgorithm object.
+ 
+> Working on implementation of:
+> 1) calculateSequentialDynamic: (Int => GeneticAlgorithm)
+> 2) calculateParallelStatic: (Int => GeneticAlgorithm)
+> 3) calculateParallelDynamic: (Int => GeneticAlgorithm)
+ 
 ## Author
 
 * **Michal Szturo** - *Initial work* - [mstr93](https://bitbucket.org/mstr93/)

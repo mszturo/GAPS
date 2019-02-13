@@ -8,53 +8,59 @@ class GeneticAlgorithm(val popSize: Int,
                        val generation: Vector[Individual]) {
   val bestSolution: Individual = generation.max
 
-  def calculate(iterations: Int): GeneticAlgorithm = {
-    calculateGen(this, iterations, iterations)
+  def calculateSequentialStatic(iterations: Int): GeneticAlgorithm =
+    calculate(iterations)(sequentialNewGeneration, staticParams)
+
+  def calculateSequentialDynamic(iterations: Int): GeneticAlgorithm =
+    calculate(iterations)(sequentialNewGeneration, dynamicParams)
+
+  def calculateParallelStatic(iterations: Int): GeneticAlgorithm =
+    calculate(iterations)(parallelNewGeneration, staticParams)
+
+  def calculateParallelDynamic(iterations: Int): GeneticAlgorithm =
+    calculate(iterations)(parallelNewGeneration, dynamicParams)
+
+  private def calculate(iterations: Int)
+                       (newGenCalcType: GeneticAlgorithm => Vector[Individual],
+                        adapt: (Int, Int) => (Double, Double)): GeneticAlgorithm = {
+    calculateGen(this, iterations, iterations)(newGenCalcType, adapt)
   }
 
   private def calculateGen(oldGA: GeneticAlgorithm,
                            iterationsLeft: Int,
-                           totalIterations: Int): GeneticAlgorithm = {
+                           totalIterations: Int)
+                          (newGenCalcType: GeneticAlgorithm => Vector[Individual],
+                           adapt: (Int, Int) => (Double, Double)): GeneticAlgorithm = {
     //    PRINTING
-    //    println("Best Solution: " + bestSolution +
-    //      " Fitness: " + bestSolution.fitness)
+    //    println("Population: " + oldGA.generation.mkString(", "))
+    //    println(oldGA.solution())
 
     if (iterationsLeft > 0) {
+      val newGeneration = newGenCalcType(oldGA)
+      val (newMutProb, newCrossProb) =
+        adapt(iterationsLeft, totalIterations)
+
       val nextGA = GeneticAlgorithm(
         oldGA.popSize,
-        oldGA.adjustCrossProb(iterationsLeft,
-          totalIterations),
-        oldGA.adjustMutProb(iterationsLeft,
-          totalIterations),
-        newGeneration())
+        newCrossProb,
+        newMutProb,
+        newGeneration)
 
       nextGA.calculateGen(nextGA,
         iterationsLeft - 1,
-        totalIterations)
-    } else
+        totalIterations)(newGenCalcType, adapt)
+    }
+    else
       this
   }
 
-  //  TODO optimize in the future
-  private def adjustCrossProb(iterationsLeft: Int,
-                              totalIterations: Int): Double = {
-    crossProb
-  }
-
-  //  TODO optimize in the future
-  private def adjustMutProb(iterationsLeft: Int,
-                            totalIterations: Int): Double = {
-    mutProb
-  }
-
-  private def newGeneration(): Vector[Individual] = {
+  private def sequentialNewGeneration(oldGA: GeneticAlgorithm): Vector[Individual] = {
     def newGenTail(newGen: Vector[Individual],
                    reminder: Int): Vector[Individual] = {
       if (reminder > 0) {
-        val children = pairOfChildren()
+        val (child1, child2) = pairOfChildren()
         newGenTail(
-          Vector(children._1,
-            children._2) ++ newGen,
+          Vector(child1, child2) ++ newGen,
           reminder - 2)
       } else {
         newGen
@@ -62,16 +68,41 @@ class GeneticAlgorithm(val popSize: Int,
     }
 
     val newGen = newGenTail(
-      Vector(bestSolution), popSize - 1)
-    if (newGen.size > generation.size)
+      Vector(oldGA.bestSolution), popSize - 1)
+    if (newGen.size > oldGA.generation.size)
       newGen.takeRight(popSize)
     else
       newGen
   }
 
+  private def parallelNewGeneration(oldGA: GeneticAlgorithm): Vector[Individual] =
+    Master.runParallel(oldGA)
+
+  private def dynamicParams(iterationsLeft: Int,
+                            totalIterations: Int): (Double, Double) = {
+    (adjustCrossProb(iterationsLeft, totalIterations),
+      adjustMutProb(iterationsLeft, totalIterations))
+  }
+
+  private def staticParams(iterationsLeft: Int,
+                           totalIterations: Int): (Double, Double) = {
+    (crossProb, mutProb)
+  }
+
+  //  TODO implement in the future
+  private def adjustCrossProb(iterationsLeft: Int,
+                              totalIterations: Int): Double = {
+    crossProb
+  }
+
+  //  TODO implement in the future
+  private def adjustMutProb(iterationsLeft: Int,
+                            totalIterations: Int): Double = {
+    mutProb
+  }
+
   private def pairOfChildren(): (Individual, Individual) = {
-    val parent1 = chooseBetterInd()
-    val parent2 = chooseBetterInd()
+    val (parent1, parent2) = takePotentialParents()
 
     if (math.random < crossProb)
       parent1.cross(parent2, mutProb)
@@ -79,17 +110,14 @@ class GeneticAlgorithm(val popSize: Int,
       (parent1.mutate(mutProb), parent2.mutate(mutProb))
   }
 
+  def takePotentialParents(): (Individual, Individual) =
+    (chooseBetterInd(), chooseBetterInd())
+
   private def chooseBetterInd(): Individual = {
-    val candidate1 = chooseRandomFromBetterHalf()
-    val candidate2 = chooseRandomFromBetterHalf()
+    val candidate1 = chooseRandomInd()
+    val candidate2 = chooseRandomInd()
 
-    Vector(candidate1, candidate2).max
-  }
-
-  private def chooseRandomFromBetterHalf(): Individual = {
-    val betterHalf = generation.takeRight(popSize / 2)
-    val randIndex = util.Random.nextInt(popSize / 2 - 1)
-    betterHalf(randIndex)
+    List(candidate1, candidate2).max
   }
 
   private def chooseRandomInd(): Individual = {
@@ -97,20 +125,11 @@ class GeneticAlgorithm(val popSize: Int,
     generation(randIndex)
   }
 
-  //  TODO
-  private def parallelNewGeneration(oldGen: Vector[Individual]
-                                   ): Vector[Individual] = {
-    def parallelNewGenTail(oldGen: Vector[Individual],
-                           newGen: Vector[Individual],
-                           reminder: Int): Vector[Individual] = {
-      if (reminder > 0) {
-        Master.runParallel(this)
-      } else {
-        newGen
-      }
-    }
-
-    parallelNewGenTail(oldGen, Vector.empty, popSize)
+  //  FOR FURTHER OPTIMIZATION
+  private def chooseRandomFromBetterHalf(): Individual = {
+    val betterHalf = generation.sorted.takeRight(popSize / 2)
+    val randIndex = util.Random.nextInt(betterHalf.length)
+    betterHalf(randIndex)
   }
 
   def solution(): String =
