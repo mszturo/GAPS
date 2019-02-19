@@ -5,40 +5,66 @@ import bitbucket.org.mstr93.GAPS.geneticAlgorithm._
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Breeder._
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Supervisor._
 
-//TODO implement tree of Supervisors with required number of Individuals
-class Supervisor(algorithm: GeneticAlgorithm) extends Actor {
-  override def receive: PartialFunction[Any, Unit] = {
+class Supervisor(algorithm: GeneticAlgorithm, neededInds: Int) extends Actor {
+  override def receive: Receive = {
     case InitiateSupervisor =>
-      createAndSendToBreeders(2)
-      context.become(aggregating)
+      neededInds match {
+        case 1 =>
+          createAndSendToBreeders()
+          context.become(awaitingChildren)
+        case 2 =>
+          createAndSendToBreeders()
+          context.become(awaitingChildren)
+        case x =>
+          if (x > 0) {
+            val (left, right) = split(neededInds)
+            createSupervisor(left) ! InitiateSupervisor
+            createSupervisor(right) ! InitiateSupervisor
+          } else {
+            context.stop(self)
+          }
+          context.become(aggregatingPartialGens)
+      }
     case unknown =>
       errorHandling(unknown)
   }
 
-  private def createAndSendToBreeders(number: Int): Unit = {
-    if (number > 0) {
-      val breeder = context.actorOf(
-        Props(classOf[Breeder], algorithm))
+  private def createSupervisor(neededInds: Int) =
+    context.actorOf(Props(classOf[Supervisor], algorithm, neededInds))
+
+  private def createAndSendToBreeders(): Unit = {
+    if (neededInds > 0) {
+      val breeder = context.actorOf(Props(classOf[Breeder], algorithm))
       val (parent1, parent2) = algorithm.takePotentialParents()
 
       if (math.random < algorithm.crossProb)
         breeder ! Cross(parent1, parent2)
       else
         breeder ! PassOn(parent1, parent2)
-
-      createAndSendToBreeders(number - 1)
     }
   }
 
-  def aggregating: Receive = {
-    case Children(firstPart) =>
-      println("got first breeder")
+  private def aggregatingPartialGens: Receive = {
+    case PartialGeneration(firstPart) =>
+      println("got first partGen")
       context.become {
-        case Children(secondPart) =>
-          println("got second breeder")
+        case PartialGeneration(secondPart) =>
+          println("got second partGen")
           context.parent ! PartialGeneration(firstPart ++ secondPart)
           context.stop(self)
       }
+    case unknown =>
+      errorHandling(unknown)
+  }
+
+  private def awaitingChildren: Receive = {
+    case Children(children) =>
+      println("got from breeder")
+      if (neededInds == 1)
+        context.parent ! PartialGeneration(children.drop(1))
+      else
+        context.parent ! PartialGeneration(children)
+      context.stop(self)
     case unknown =>
       errorHandling(unknown)
   }
@@ -51,6 +77,11 @@ class Supervisor(algorithm: GeneticAlgorithm) extends Actor {
 }
 
 object Supervisor {
+  def split(length: Int): (Int, Int) = {
+    val first = length / 2
+    val second = length - first
+    (first, second)
+  }
 
   case object InitiateSupervisor
 

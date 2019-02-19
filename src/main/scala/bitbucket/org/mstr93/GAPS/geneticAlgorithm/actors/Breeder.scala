@@ -5,7 +5,7 @@ import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Breeder._
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.{GeneticAlgorithm, Individual}
 
 class Breeder(algorithm: GeneticAlgorithm) extends Actor {
-  override def receive: PartialFunction[Any, Unit] = {
+  override def receive: Receive = {
     case Cross(parent1, parent2) =>
       val (child1, child2) = parent1.cross(parent2)
       sender ! Children(Vector(

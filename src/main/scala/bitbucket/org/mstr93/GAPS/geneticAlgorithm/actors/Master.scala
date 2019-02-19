@@ -3,9 +3,9 @@ package bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-import bitbucket.org.mstr93.GAPS.geneticAlgorithm._
+import bitbucket.org.mstr93.GAPS.geneticAlgorithm.{GeneticAlgorithm, Individual}
 import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Master._
-import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Supervisor._
+import bitbucket.org.mstr93.GAPS.geneticAlgorithm.actors.Supervisor.{InitiateSupervisor, PartialGeneration}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -13,23 +13,22 @@ import scala.concurrent.duration._
 class Master(algorithm: GeneticAlgorithm) extends Actor {
   override def receive: Receive = {
     case Initiate =>
-      val supervisors = algorithm.popSize / 4 + 1
-      createAndSendToSupervisors(supervisors)
+      createAndSendToSupervisors(algorithm.generation.length - 1)
       context.become(aggregating)
       self ! PartialGeneration(Vector(algorithm.bestSolution))
     case unknown =>
       errorHandling(unknown)
   }
 
-//  TODO maybe think about reducing producing unnecessary supervisors?
-  private def createAndSendToSupervisors(number: Int): Unit = {
-    if (number > 0) {
-      val supervisor = context.actorOf(
-        Props(classOf[Supervisor], algorithm))
-      supervisor ! InitiateSupervisor
-      createAndSendToSupervisors(number - 1)
-    }
+  private def createAndSendToSupervisors(neededInds: Int): Unit = {
+    val (left, right) = Supervisor.split(neededInds)
+
+    createSupervisor(left) ! InitiateSupervisor
+    createSupervisor(right) ! InitiateSupervisor
   }
+
+  private def createSupervisor(neededInds: Int) =
+    context.actorOf(Props(classOf[Supervisor], algorithm, neededInds))
 
   def aggregating: Receive = {
     case PartialGeneration(firstPart) =>
@@ -37,9 +36,6 @@ class Master(algorithm: GeneticAlgorithm) extends Actor {
       if (firstPartSize == algorithm.popSize) {
         context.become(done)
         self ! WholeGeneration(firstPart)
-      }
-      else if (firstPartSize > algorithm.popSize) {
-        self ! PartialGeneration(firstPart.take(firstPartSize - 1))
       }
       else {
         context.become {
@@ -56,14 +52,13 @@ class Master(algorithm: GeneticAlgorithm) extends Actor {
     case WholeGeneration(generation) =>
       println("WHOLE")
       println(generation)
-//      TODO
+      //      TODO
       context.stop(self)
-    case _:PartialGeneration =>
     case unknown =>
       errorHandling(unknown)
   }
 
-  private def errorHandling(unknown: Any): Unit ={
+  private def errorHandling(unknown: Any): Unit = {
     println(getClass + " received " + unknown.getClass)
     new Exception().printStackTrace()
     context.stop(self)
@@ -82,7 +77,7 @@ object Master {
     val future = master ? Initiate
     val result = Await.result(future, timeout.duration)
       .asInstanceOf[WholeGeneration]
-    println("Dpa" + result)
+    println("Got out of actor system: " + result)
 
     result.generation
   }
