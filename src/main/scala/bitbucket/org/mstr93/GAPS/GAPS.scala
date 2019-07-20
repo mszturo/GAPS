@@ -1,61 +1,43 @@
-package bitbucket.org.mstr93.GAPS
+package bitbucket.org.mstr93.gaps
 
-import bitbucket.org.mstr93.GAPS.geneticAlgorithm.{GeneticAlgorithm, Individual}
+import bitbucket.org.mstr93.gaps.algorithm.GeneticAlgorithmImpl
+import bitbucket.org.mstr93.gaps.algorithm.config.AlgorithmConfigImpl
+import bitbucket.org.mstr93.gaps.domain.Individual
 
 object GAPS extends App {
   //  testRandomIndividual()
   //  testCrossing(10)
   val mockGA = getTestGA
   val iterations = 500
-  testLinear(mockGA, iterations)
-  testParallel(mockGA, iterations)
+  testGA(mockGA, iterations)
 
-  def getTestGA: GeneticAlgorithm = {
-    val popSize = 12
-    val crossProb = 0.9
-    val mutProb = 0.2
+  def getTestGA: GeneticAlgorithmImpl = {
     val genomeLength = 12
 
-    val testFunc = { xs: Vector[Boolean] =>
+    val testFunc = { xs: Seq[Boolean] =>
       xs.map {
         case true => 1.0
         case false => 0.0
       }.fold(0.0)((a, b) => a + b)
     }
 
-    GeneticAlgorithm(popSize,
-      crossProb,
-      mutProb,
-      genomeLength,
-      testFunc)
+    val config = new AlgorithmConfigImpl
+
+    GeneticAlgorithmImpl(config, genomeLength, testFunc)
   }
 
-  def testLinear(ga: GeneticAlgorithm, iterations: Int): Unit = {
+  def testGA(ga: GeneticAlgorithmImpl, iterations: Int): Unit = {
     println("\nSINGLE THREAD")
 
     println("Generation 0")
     println("Population: " + ga.generation.mkString(", "))
-    println(ga.solution())
+    println(ga.bestIndividual)
 
-    val finalGA = ga.calculateSequentialStatic(iterations)
+    val finalGA = ga.calculateStatic(iterations)
     println("Generation " + iterations)
     println("Population: " + finalGA.generation.mkString(", "))
-    println(finalGA.solution())
+    println(finalGA.bestIndividual)
   }
-
-  def testParallel(ga: GeneticAlgorithm, iterations: Int): Unit = {
-    println("\nPARALLEL")
-
-    println("Generation 0")
-    println("Population: " + ga.generation.mkString(", "))
-    println(ga.solution())
-
-    val finalGA = ga.calculateParallelStatic(iterations)
-    println("Generation " + iterations)
-    println("Population: " + finalGA.generation.mkString(", "))
-    println(finalGA.solution())
-  }
-
 
   def testRandomIndividual(): Unit = {
     val testFunc = { xs: Vector[Boolean] => xs.length.toDouble }

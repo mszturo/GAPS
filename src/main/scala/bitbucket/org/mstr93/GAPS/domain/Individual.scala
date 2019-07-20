@@ -1,12 +1,12 @@
-package bitbucket.org.mstr93.GAPS.geneticAlgorithm
+package bitbucket.org.mstr93.gaps.domain
 
-import bitbucket.org.mstr93.GAPS.geneticAlgorithm.Individual._
+import bitbucket.org.mstr93.gaps.domain.Individual._
 
 class Individual(private val genotype: Vector[Boolean],
                  private val fitFunc: Vector[Boolean] => Double)
   extends Ordered[Individual] {
   private val genomeLen = genotype.length
-  val fitness = fitFunc(genotype)
+  val fitness: Double = fitFunc(genotype)
 
   def this(length: Int,
            fitFunc: Vector[Boolean] => Double) {
