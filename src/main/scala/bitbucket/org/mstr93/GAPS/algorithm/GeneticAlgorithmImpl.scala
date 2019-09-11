@@ -151,7 +151,7 @@ case class GeneticAlgorithmImpl private(config: AlgorithmConfig, generation: Seq
 object GeneticAlgorithmImpl {
   def apply(config: AlgorithmConfig,
             genomeLen: Int,
-            fitFunc: Seq[Boolean] => Double): GeneticAlgorithmImpl = {
+            fitFunc: Individual => Double): GeneticAlgorithmImpl = {
     GeneticAlgorithmImpl(
       config,
       generateRandomPop(config.populationSize, genomeLen, fitFunc))
@@ -159,7 +159,7 @@ object GeneticAlgorithmImpl {
 
   private def generateRandomPop(popSize: Int,
                                 genomeLen: Int,
-                                fitFunc: Seq[Boolean] => Double
+                                fitFunc: Individual => Double
                                ): Seq[Individual] =
     Seq.fill(popSize)(Individual(genomeLen, fitFunc))
 }

@@ -2,14 +2,14 @@ package bitbucket.org.mstr93.gaps.domain
 
 import bitbucket.org.mstr93.gaps.domain.Individual._
 
-class Individual(private val genotype: Vector[Boolean],
-                 private val fitFunc: Vector[Boolean] => Double)
+class Individual(val genotype: Vector[Bit],
+                 private val fitFunc: Individual => Double)
   extends Ordered[Individual] {
-  private val genomeLen = genotype.length
-  val fitness: Double = fitFunc(genotype)
+  private lazy val genomeLen = genotype.length
+  lazy val fitness: Double = fitFunc(this)
 
   def this(length: Int,
-           fitFunc: Vector[Boolean] => Double) {
+           fitFunc: Individual => Double) {
     this(generateRandomGenotype(length), fitFunc)
   }
 
@@ -21,8 +21,8 @@ class Individual(private val genotype: Vector[Boolean],
     )
   }
 
-  private def mutateGene(gene: Boolean,
-                         mutProb: Double) = {
+  private def mutateGene(gene: Bit,
+                         mutProb: Double):Bit = {
     if (math.random < mutProb)
       !gene
     else
@@ -38,8 +38,8 @@ class Individual(private val genotype: Vector[Boolean],
 
   override def toString: String =
     genotype.map {
-      case true => "1"
-      case false => "0"
+      case One => "1"
+      case Zero => "0"
     }
       .foldLeft("")((s1, s2) => s1 + s2)
 
@@ -50,20 +50,23 @@ class Individual(private val genotype: Vector[Boolean],
 object Individual {
   private val defaultMutProb: Double = 0.0
 
-  def apply(genotype: Vector[Boolean],
-            fitFunc: Vector[Boolean] => Double): Individual =
+  def apply(genotype: Vector[Bit],
+            fitFunc: Individual => Double): Individual =
     new Individual(genotype, fitFunc)
 
   def apply(length: Int,
-            fitFunc: Vector[Boolean] => Double): Individual =
+            fitFunc: Individual => Double): Individual =
     new Individual(length, fitFunc)
 
-  private def generateRandomGenotype(length: Int): Vector[Boolean] = {
+  private def generateRandomGenotype(length: Int): Vector[Bit] = {
     Vector.fill(length)(randomGene)
   }
 
-  private def randomGene: Boolean = {
-    math.random < 0.5
+  private def randomGene: Bit = {
+    if (math.random < 0.5)
+      Zero
+    else
+      One
   }
 
   private def produceChild(parent1: Individual, parent2: Individual, pivot: Int, mutProb: Double = defaultMutProb): Individual = {

@@ -2,7 +2,7 @@ package bitbucket.org.mstr93.gaps
 
 import bitbucket.org.mstr93.gaps.algorithm.GeneticAlgorithmImpl
 import bitbucket.org.mstr93.gaps.algorithm.config.AlgorithmConfigImpl
-import bitbucket.org.mstr93.gaps.domain.Individual
+import bitbucket.org.mstr93.gaps.domain.{Individual, One, Zero}
 
 object GAPS extends App {
   //  testRandomIndividual()
@@ -14,11 +14,11 @@ object GAPS extends App {
   def getTestGA: GeneticAlgorithmImpl = {
     val genomeLength = 12
 
-    val testFunc = { xs: Seq[Boolean] =>
-      xs.map {
-        case true => 1.0
-        case false => 0.0
-      }.fold(0.0)((a, b) => a + b)
+    val testFunc: Individual => Double = { individual: Individual =>
+      individual.genotype.map {
+        case One => 1
+        case Zero => 0
+      }.sum
     }
 
     val config = new AlgorithmConfigImpl
@@ -40,15 +40,15 @@ object GAPS extends App {
   }
 
   def testRandomIndividual(): Unit = {
-    val testFunc = { xs: Vector[Boolean] => xs.length.toDouble }
+    val testFunc = { ind: Individual => ind.genotype.length.toDouble }
     val individual: Individual = Individual(5, testFunc)
     println(individual)
   }
 
   def testCrossing(tries: Int): Unit = {
-    val testFunc = { xs: Vector[Boolean] => xs.size.toDouble }
-    val genome1 = Vector(true, true, true, true, true)
-    val genome2 = Vector(false, false, false, false, false)
+    val testFunc = { ind: Individual => ind.genotype.size.toDouble }
+    val genome1 = Vector(One, One, One, One, One)
+    val genome2 = Vector(Zero, Zero, Zero, Zero, Zero)
     val parent1 = Individual(genome1, testFunc)
     val parent2 = Individual(genome2, testFunc)
 
